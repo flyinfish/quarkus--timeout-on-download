@@ -18,8 +18,8 @@
         <quarkus.platform.version>3.25.4</quarkus.platform.version> 
         <!-- 
         does work like a charm
-        <quarkus.platform.version>3.24.4</quarkus.platform.version> -->
-        <quarkus.platform.version>3.26.2</quarkus.platform.version>
+        <quarkus.platform.version>3.24.4</quarkus.platform.version> 
+        <quarkus.platform.version>3.26.2</quarkus.platform.version>-->
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.3</surefire-plugin.version>
     </properties>
