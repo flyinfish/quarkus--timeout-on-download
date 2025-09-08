@@ -21,11 +21,11 @@ serves files trough [FilesResource localhost:8092/files](service/src/main/java/o
 ### [client](client)
 
 reads files and returns name type and size as json with [DownloadResource  localhost:8091/files](client/src/main/java/org/acme/DownloadResource.java).
-It is here where quarkus fails
+It is here where quarkus fails / the bug happens.
 
 ### [trigger](trigger)
 
-triggers downloads in client and checks them for received size.
+triggers downloads in `client` and checks them for received size.
 check [swagger-ui](http://localhost:8080/q/dev-ui/io.quarkus.quarkus-smallrye-openapi/swagger-ui)
 
 ## reproduce 
