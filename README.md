@@ -57,7 +57,6 @@ it does reproduce with 1000 requests usingConcurrencyOf 30.
   i think after making "enough" errors `triggerFailure... ` these connection are not going back to pool. 
   it ends up having a service totally out of order no request are going trough ha more
 
+
 it does reproduce with 20 request and [quarkus.rest-client.connection-pool-size=3](client/src/main/resources/application.properties#L5) active.
 since this setting did not change between quarkus 3.24.4 and 3.25.4 it is not "for real" reproduced.
-what we are looking for is `clientFailure - jakarta.ws.rs.ProcessingException: The timeout of 30000 ms has been exceeded when getting a connection to localhost:8092`
-not `triggerFailure - jakarta.ws.rs.ProcessingException: The timeout period of 35000ms has been exceeded while executing GET /files/quarkus-all-config.html for server null`
