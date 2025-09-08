@@ -16,11 +16,12 @@ shared set of files with a descriptor [files.properties](files/files.properties)
 
 ### [service](service)
 
-serves files trough [FilesResource localhost:8092/files](service/src/main/java/org/acme/FilesResource.java)
+serves files trough [FilesResource localhost:8092/files](service/src/main/java/org/acme/FilesResource.java). this is like infrastructure.
 
 ### [client](client)
 
-reads files and returns name type and size as json with [DownloadResource  localhost:8091/files](client/src/main/java/org/acme/DownloadResource.java)
+reads files and returns name type and size as json with [DownloadResource  localhost:8091/files](client/src/main/java/org/acme/DownloadResource.java).
+It is here where quarkus fails
 
 ### [trigger](trigger)
 
@@ -43,10 +44,18 @@ quarkus dev
 ```
 
 
-use [swagger-ui](http://localhost:8080/q/dev-ui/io.quarkus.quarkus-smallrye-openapi/swagger-ui) to start downloads.
+use [swagger-ui](http://localhost:8080/q/dev-ui/io.quarkus.quarkus-smallrye-openapi/swagger-ui).
+
+* POST /triggers to start downloads
+* GET /triggers to check state / success
+* GET /triggers/failures to verify failures
  
-it does reproduce with 1000 requests usingConcurrencyOf 30. once in failed state no request is getting trough any more. i think after making "enough" errors `triggerFailure - jakarta.ws.rs.ProcessingException: The timeout period of 35000ms has been exceeded while executing GET /files/quarkus-all-config.html for server null` because of performance unter heavy fire. we start to see `clientFailure - jakarta.ws.rs.ProcessingException: The timeout of 30000 ms has been exceeded when getting a connection to localhost:8092`.
-once they occur the service is "out of order". and when afterwards processing a single request it fails, ass subsequent requests are failing.
+it does reproduce with 1000 requests usingConcurrencyOf 30. 
+* it does take a while until we start seeing `triggerFailure - jakarta.ws.rs.ProcessingException: The timeout period of 35000ms has been exceeded while executing GET /files/quarkus-all-config.html for server null` this is not yet the reproduction of the problem. 
+* after a while we start then seeing `clientFailure - jakarta.ws.rs.ProcessingException: The timeout of 30000 ms has been exceeded when getting a connection to localhost:8092`.
+* once in this state no request is getting trough any more. 
+  i think after making "enough" errors `triggerFailure... ` these connection are not going back to pool. 
+  it ends up having a service totally out of order no request are going trough ha more
 
 it does reproduce with 20 request and [quarkus.rest-client.connection-pool-size=3](client/src/main/resources/application.properties#L5) active.
 since this setting did not change between quarkus 3.24.4 and 3.25.4 it is not "for real" reproduced.
