@@ -104,11 +104,12 @@ public class TriggerResource {
     @Path("/failed")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public List<TriggerRequest> failed() {
-        return state == null ? null : state.getFailedRequests();
+    public FailedRequests failed() {
+        return state == null ? null : FailedRequests.from(state.getFailedRequests());
     }
 
     public class TriggerState {
+
         private final TriggerParams params;
         private final List<TriggerRequest> requests;
 
@@ -118,9 +119,9 @@ public class TriggerResource {
             var files = expectedFiles.values().stream().toList();
             this.requests = IntStream.range(0, params.requests())
                     .mapToObj(i -> {
-                        var xpected = files.get(random.nextInt(files.size() - 1));
+                        var expectedFile = files.get(random.nextInt(files.size() - 1));
                         var delay = random.nextInt(params.minDelayMs(), params.maxDelayMs() + 1);
-                        return new TriggerRequest(delay, xpected);
+                        return new TriggerRequest(delay, expectedFile);
                     })
                     .toList();
         }
@@ -134,8 +135,8 @@ public class TriggerResource {
                         var start = System.currentTimeMillis();
                         rr.run();
                         var duration = System.currentTimeMillis() - start;
-                        Log.infof(" * %s completed in %d ms: success %s", rr.getExpected().name(), duration,
-                                rr.isSuccess());
+                        Log.infof(" * %s completed in %d ms: success %s - %s", rr.getExpected().name(), duration,
+                                rr.isSuccess(), rr.failureId());
                     }))
                     .collect(Collectors.toList());
             Uni.combine().all().unis(queue).usingConcurrencyOf(params.usingConcurrencyOf()).discardItems().subscribe()
@@ -158,17 +159,17 @@ public class TriggerResource {
 
         @JsonIgnore
         public List<TriggerRequest> getFailedRequests() {
-            return requests.stream().filter(Predicate.not(TriggerRequest::isSuccess)).toList();
+            return requests.stream().filter(r -> r.isCompleted() && !r.isSuccess()).toList();
         }
 
         public int getPercentCompleted() {
             var completed = requests.stream().filter(TriggerRequest::isCompleted).count();
-            return (int) ((completed*100)/requests.size());
+            return (int) ((completed * 100) / requests.size());
         }
 
         public int getPercentSuccess() {
             var success = requests.stream().filter(TriggerRequest::isSuccess).count();
-            return (int) ((success*100)/requests.size());
+            return (int) ((success * 100) / requests.size());
         }
 
         public boolean isCompleted() {
@@ -183,7 +184,7 @@ public class TriggerResource {
             private final int delay;
             private final ExpectedFile expected;
             private ActualFile actual;
-            private Exception failed;
+            private Exception triggerFailure;
 
             public TriggerRequest(int delay, ExpectedFile expected) {
                 this.delay = delay;
@@ -194,7 +195,7 @@ public class TriggerResource {
                 try {
                     actual = triggerClient.download(expected.name());
                 } catch (Exception e) {
-                    failed = e;
+                    triggerFailure = e;
                 }
             }
 
@@ -210,12 +211,20 @@ public class TriggerResource {
                 return actual;
             }
 
-            public String getFailed() {
-                return Objects.toString(failed);
+            public String getTriggerFailure() {
+                return Objects.toString(triggerFailure);
+            }
+
+            public String failureId() {
+                return triggerFailure == null && (actual == null || actual.clientFailure() == null)
+                        ? "ok"
+                        : actual != null && actual.clientFailure() != null
+                                ? "clientFailure - " + actual.clientFailure()
+                                : "triggerFailure - " + triggerFailure;
             }
 
             public boolean isCompleted() {
-                return actual != null || failed != null;
+                return actual != null || triggerFailure != null;
             }
 
             public boolean isSuccess() {
@@ -230,4 +239,14 @@ public class TriggerResource {
         }
     }
 
+    public record FailedRequests(Map<String, Integer> countByfailure, List<TriggerRequest> requests) {
+
+        public static FailedRequests from(List<TriggerRequest> failedRequests) {
+            var countByfailure = failedRequests.stream()
+                    .map(TriggerRequest::failureId)
+                    .collect(Collectors.groupingBy(r -> r.toString(), Collectors.summingInt(r -> 1)));
+            return new FailedRequests(countByfailure, failedRequests);
+        }
+
+    }
 }

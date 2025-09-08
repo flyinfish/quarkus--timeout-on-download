@@ -19,7 +19,11 @@ public class DownloadResource {
     @Path("{name}")
     @Produces(MediaType.APPLICATION_JSON)
     public FileResponseEntity getFileContent(@PathParam("name") String name) throws IOException {
-        var receivedEntity = serviceClient.download(name);
-        return FileResponseEntity.from(receivedEntity);
+        try {
+            var receivedEntity = serviceClient.download(name);
+            return FileResponseEntity.from(receivedEntity);
+        } catch (Exception e) {
+            return FileResponseEntity.from(name, e);
+        }
     }
 }

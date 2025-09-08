@@ -1,4 +1,4 @@
 package org.acme;
 
-public record ActualFile(String name, String type, int receivedBytes ) {
+public record ActualFile(String name, String type, int receivedBytes, String clientFailure ) {
 }
